@@ -89,7 +89,8 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
             data,
             departure.get(CONF_STOP_ID),
             departure.get(CONF_ROUTE),
-            departure.get(CONF_NAME)
+            departure.get(CONF_NAME),
+            departure.get(CONF_DIRECTION)
         ))
 
     add_devices(sensors, True)
@@ -103,6 +104,7 @@ class PublicTransportSensor(SensorEntity):
         self.data = data
         self._stop = stop
         self._route = route
+        self._direction_id = direction_id
 
         self._attr_name = name
         self._attr_icon = ICON
@@ -110,7 +112,7 @@ class PublicTransportSensor(SensorEntity):
 
     def _get_next_buses(self):
         buses = self.data.info.get(self._route, {}).get(self._stop, [])
-        tsh_LOGGER.info("Found {} buses for route {}".format(len(buses), self._route))
+        _LOGGER.info("Found {} buses for route {}".format(len(buses), self._route))
         # direction_id default is None, only filter by direction_id if set in config.
         if not self._direction_id:
             return buses
