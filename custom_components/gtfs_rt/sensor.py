@@ -188,7 +188,7 @@ class PublicTransportData(object):
             if entity.HasField('trip_update'):
                 route_id = entity.trip_update.trip.route_id
                 direction_id = None
-                if direction_id in entity.trip_update.trip:
+                if 'direction_id' in entity.trip_update.trip:
                     direction_id = entity.trip_update.trip.direction_id
 
 
