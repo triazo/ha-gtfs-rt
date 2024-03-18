@@ -187,9 +187,7 @@ class PublicTransportData(object):
         for entity in feed.entity:
             if entity.HasField('trip_update'):
                 route_id = entity.trip_update.trip.route_id
-                direction_id = None
-                if 'direction_id' in entity.trip_update.trip:
-                    direction_id = entity.trip_update.trip.direction_id
+                direction_id = entity.trip_update.trip.direction_id
 
 
                 # Get link between vehicle_id from trip_id from vehicles positions if needed
