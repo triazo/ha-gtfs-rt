@@ -110,7 +110,7 @@ class PublicTransportSensor(SensorEntity):
 
     def _get_next_buses(self):
         buses = self.data.info.get(self._route, {}).get(self._stop, [])
-        _LOGGER.info("Found {} buses for route {}".format(len(buses), self._route))
+        tsh_LOGGER.info("Found {} buses for route {}".format(len(buses), self._route))
         # direction_id default is None, only filter by direction_id if set in config.
         if not self._direction_id:
             return buses
