@@ -30,6 +30,7 @@ CONF_HEADERS = "headers"
 CONF_STOP_ID = 'stopid'
 CONF_ROUTE = 'route'
 CONF_DEPARTURES = 'departures'
+CONF_DIRECTION = 'direction'
 CONF_TRIP_UPDATE_URL = 'trip_update_url'
 CONF_VEHICLE_POSITION_URL = 'vehicle_position_url'
 
@@ -49,6 +50,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_VEHICLE_POSITION_URL): cv.string,
     vol.Optional(CONF_DEPARTURES): [{
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Optional(CONF_DIRECTION, default=None): cv.positive_int,
         vol.Required(CONF_STOP_ID): cv.string,
         vol.Required(CONF_ROUTE): cv.string
     }]
@@ -96,7 +98,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 class PublicTransportSensor(SensorEntity):
     """Implementation of a public transport sensor."""
 
-    def __init__(self, data, stop, route, name):
+    def __init__(self, data, stop, route, name, direction_id):
         """Initialize the sensor."""
         self.data = data
         self._stop = stop
@@ -107,7 +109,12 @@ class PublicTransportSensor(SensorEntity):
         self._attr_native_unit_of_measurement = UnitOfTime.MINUTES
 
     def _get_next_buses(self):
-        return self.data.info.get(self._route, {}).get(self._stop, [])
+        buses = self.data.info.get(self._route, {}).get(self._stop, [])
+        # direction_id default is None, only filter by direction_id if set in config.
+        if not self._direction_id:
+            return buses
+
+        return list(b for b in buses if b.direction == direction_id)
 
     @property
     def state(self):
@@ -161,10 +168,11 @@ class PublicTransportData(object):
         from google.transit import gtfs_realtime_pb2
 
         class StopDetails:
-            def __init__(self, arrival_time, position, occupancy):
+            def __init__(self, arrival_time, position, occupancy, direction):
                 self.arrival_time = arrival_time
                 self.position = position
                 self.occupancy = occupancy
+                self.direction = direction
 
         feed = gtfs_realtime_pb2.FeedMessage()
         response = requests.get(self._trip_update_url, headers=self._headers)
@@ -172,10 +180,11 @@ class PublicTransportData(object):
             _LOGGER.error("updating route status got {}:{}".format(response.status_code,response.content))
         feed.ParseFromString(response.content)
         departure_times = {}
-        
+
         for entity in feed.entity:
             if entity.HasField('trip_update'):
                 route_id = entity.trip_update.trip.route_id
+                direction_id = entity.trip_update.trip.direction_id
 
                 # Get link between vehicle_id from trip_id from vehicles positions if needed
                 vehicle_id = entity.trip_update.vehicle.id
@@ -194,7 +203,8 @@ class PublicTransportData(object):
                         details = StopDetails(
                             datetime.datetime.fromtimestamp(stop.arrival.time),
                             vehicle_positions.get(vehicle_id),
-                            vehicle_occupancy.get(vehicle_id)
+                            vehicle_occupancy.get(vehicle_id),
+                            direction_id
                         )
                         departure_times[route_id][stop_id].append(details)
 
